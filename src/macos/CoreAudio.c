@@ -30,6 +30,7 @@
 #include "common/ardopcommon.h"
 #include "common/ptt.h"
 #include "common/Webgui.h"
+#include "common/netaudio.h"
 
 // Use LastGoodCaptureDevice and LastGoodPlaybackDevice to store the names of
 // the last audio devices that were successfully opened.  These are used by
@@ -368,6 +369,8 @@ void GetDevices() {
 		if (devindex + 1 > deviceMapLen)
 			deviceMapLen = devindex + 1;
 	}
+	// The socket audio device in use is not discoverable; list it.
+	netaudio_list_device();
 }
 
 
@@ -556,6 +559,8 @@ static OSStatus open_audio(
 // Close the playback audio device if one is open and set TXEnabled=false.
 // do_getdevices is passed to updateWebGuiAudioConfig()
 void CloseSoundPlayback(bool do_getdevices) {
+	if (netaudio_is_dev(PlaybackDevice))
+		netaudio_close(false);
 	if (playQueue != NULL) {
 		playRunning = false;
 		AudioQueueStop(playQueue, true);
@@ -637,6 +642,18 @@ bool OpenSoundPlayback(char *devstr, int ch) {
 		return true;
 	}
 
+	if (netaudio_is_dev(devstr)) {
+		// Socket audio device: the host program owns the sample clock.
+		if (!netaudio_open(devstr, false))
+			return false;
+		TXEnabled = true;
+		snprintf(PlaybackDevice, DEVSTRSZ, "%s", devstr);
+		strcpy(LastGoodPlaybackDevice, PlaybackDevice);
+		Pch = ch;
+		updateWebGuiAudioConfig(false);
+		return true;
+	}
+
 	// FindAudioDevice searches for an exact match of device name, and if this
 	// fails, searches for a case insensitive match of device description.
 	if ((aindex = FindAudioDevice(devstr, false)) < 0) {
@@ -689,6 +706,8 @@ bool OpenSoundPlayback(char *devstr, int ch) {
 // Close the capture audio device if one is open and set RXEnabled=false.
 // do_getdevices is passed to updateWebGuiAudioConfig()
 void CloseSoundCapture(bool do_getdevices) {
+	if (netaudio_is_dev(CaptureDevice))
+		netaudio_close(true);
 	if (recQueue != NULL) {
 		recRunning = false;
 		AudioQueueStop(recQueue, true);
@@ -770,6 +789,21 @@ bool OpenSoundCapture(char *devstr, int ch) {
 		return true;
 	}
 
+	if (netaudio_is_dev(devstr)) {
+		// Socket audio device: the host program sends RX audio in real time.
+		if (!netaudio_open(devstr, true))
+			return false;
+		RXEnabled = true;
+		RXSilent = false;
+		snprintf(CaptureDevice, DEVSTRSZ, "%s", devstr);
+		strcpy(LastGoodCaptureDevice, CaptureDevice);
+		Cch = ch;
+		if (!SoundIsPlaying)
+			StartCapture();
+		updateWebGuiAudioConfig(false);
+		return true;
+	}
+
 	// FindAudioDevice searches for an exact match of device name, and if this
 	// fails, searches for a case insensitive match of device description.
 	if ((aindex = FindAudioDevice(devstr, true)) < 0) {
@@ -834,6 +868,8 @@ bool SoundCardWrite(short *input, unsigned int nSamples) {
 	}
 	if (strcmp(PlaybackDevice, "NOSOUND") == 0)
 		return true;  // Do nothing, indicate success.
+	if (netaudio_is_dev(PlaybackDevice))
+		return netaudio_write(input, nSamples);
 
 	unsigned int written = 0;
 	int waitcount = 0;
@@ -881,6 +917,8 @@ int SoundCardRead(short *input, unsigned int nSamples) {
 		ZF_LOGD("SoundCardRead() called when not RXEnabled.  Ignoring.");
 		return 0;
 	}
+	if (netaudio_is_dev(CaptureDevice))
+		return netaudio_read(input, nSamples);
 	if (ring_count(&captureRing) < (int) nSamples)
 		return 0;  // Insufficient samples available.  Do nothing.
 	return ring_read(&captureRing, input, (int) nSamples);
@@ -948,7 +986,11 @@ bool SoundFlush() {
 	// in two stages: first until the ring has been drained into the queue, then
 	// until the audio hardware has played through the end of the last real
 	// audio.
-	if (strcmp(PlaybackDevice, "NOSOUND") != 0 && TXEnabled) {
+	if (netaudio_is_dev(PlaybackDevice) && TXEnabled) {
+		// Socket audio: the host acknowledges when the transmission has left
+		// the radio, so PTT FALSE marks the real end of RF.
+		netaudio_flush((unsigned int) (SampleNo / 12) + 2000);
+	} else if (strcmp(PlaybackDevice, "NOSOUND") != 0 && TXEnabled) {
 		// 1. Wait until the output callback has pulled all staged audio out of
 		//    the ring and into the AudioQueue.
 		int waitcount = 0;

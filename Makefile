@@ -93,6 +93,7 @@ OBJS = \
 
 # Object files shared by the Unix-like platforms (Linux and macOS)
 OBJS_UNIX = \
+	$(BUILDDIR)/src/unix/netaudio.o \
 	$(BUILDDIR)/src/unix/os_util.o \
 
 # Linux-only object files
