@@ -1556,8 +1556,14 @@ bool SoundCardWrite(short * input, unsigned int nSamples) {
 	}
 	if (strcmp(PlaybackDevice, "NOSOUND") == 0)
 		return true;  // Do nothing, indicate success.
-	if (netaudio_is_dev(PlaybackDevice))
-		return netaudio_write(input, nSamples);
+	if (netaudio_is_dev(PlaybackDevice)) {
+		if (netaudio_write(input, nSamples))
+			return true;
+		// Stalled or lost host: drop PTT (CloseSoundPlayback) and tell the host.
+		SendCommandToHost("FAULT Socket audio send stalled or failed; playback closed");
+		CloseSoundPlayback(true);  // calls updateWebGuiAudioConfig(true);
+		return false;
+	}
 	snd_pcm_sframes_t avail;
 	int errcount = 0;
 	while ((avail = snd_pcm_avail(playhandle)) < nSamples && TXEnabled) {
@@ -1736,6 +1742,12 @@ void InitAudio(bool quiet) {
 void PollReceivedSamples() {
 	if (strcmp(CaptureDevice, "NOSOUND") == 0)
 		return;
+	if (netaudio_is_dev(CaptureDevice) && netaudio_lost()) {
+		SendCommandToHost("FAULT Socket audio connection lost; audio closed");
+		CloseSoundPlayback(false);
+		CloseSoundCapture(true);
+		return;
+	}
 
 	// TODO: If we always use inbuufer[0], why is there inbuffer[1]?
 	if (SoundCardRead(&inbuffer[0][0], ReceiveSize) == 0)
@@ -1788,7 +1800,8 @@ bool SoundFlush() {
 	if (netaudio_is_dev(PlaybackDevice) && TXEnabled) {
 		// Socket audio: the host acknowledges when the transmission has left
 		// the radio, so PTT FALSE marks the real end of RF.
-		netaudio_flush((unsigned int) (SampleNo / 12) + 2000);
+		if (!netaudio_flush((unsigned int) (SampleNo / 12) + 2000))
+			SendCommandToHost("FAULT Socket audio: transmission not acknowledged by the host");
 	} else if (strcmp(PlaybackDevice, "NOSOUND") != 0
 		&& pttOnTime + txlenMs > Now
 	)

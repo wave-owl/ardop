@@ -2,8 +2,11 @@
 //
 
 #include <stdbool.h>
+#include <string.h>
 #ifdef WIN32
 #define _CRT_SECURE_NO_DEPRECATE
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #pragma comment(lib, "WS2_32.Lib")
 
@@ -15,6 +18,7 @@
 #include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <signal.h>
 #include <sys/select.h>
 #include <stdarg.h>
@@ -69,6 +73,35 @@ extern bool NeedCWID;  // SENDCWID Command Flag
 extern bool NeedTwoToneTest;
 
 SOCKET TCPControlSock = 0, TCPDataSock = 0;
+
+// Address the host command and data ports (and the legacy GUI UDP port) bind
+// to.  Loopback by default, so only programs on this computer can control the
+// TNC or hand it data to transmit; --hostaddr overrides it explicitly
+// (e.g. 0.0.0.0 for a host program on another computer).
+char HostBindAddr[64] = "127.0.0.1";
+
+static bool set_bind_addr(struct sockaddr_in *sin) {
+	if (inet_pton(AF_INET, HostBindAddr, &sin->sin_addr) != 1) {
+		ZF_LOGE("Invalid --hostaddr %s (IPv4 address expected)", HostBindAddr);
+		return false;
+	}
+	return true;
+}
+
+// A second connection while one is active is refused (closed at once), so no
+// other program can take over a running host session.
+static void refuse_extra(SOCKET listen_sock, const char *what) {
+	struct sockaddr_in sin;
+	unsigned int addrlen = sizeof(sin);
+	SOCKET extra = accept(listen_sock, (struct sockaddr *) &sin, &addrlen);
+	if (extra == INVALID_SOCKET)
+		return;
+	char addr[INET_ADDRSTRLEN] = "?";
+	inet_ntop(AF_INET, &sin.sin_addr, addr, sizeof(addr));
+	ZF_LOGW("Refused a second host %s connection from %s while one is active",
+		what, addr);
+	closesocket(extra);
+}
 SOCKET ListenSock = 0, DataListenSock = 0;
 SOCKET GUISock = 0;  // UDP socket for GUI interface
 
@@ -492,8 +525,10 @@ SOCKET OpenSocket4(int port)
 	u_long param=1;
 
 	psin=&local_sin;
+	memset(psin, 0, sizeof(*psin));
 	psin->sin_family = AF_INET;
-	psin->sin_addr.s_addr = INADDR_ANY;
+	if (!set_bind_addr(psin))
+		return 0;
 
 	if (port)
 	{
@@ -538,8 +573,10 @@ SOCKET OpenUDPSocket(int port)
 	u_long param=1;
 
 	psin=&local_sin;
+	memset(psin, 0, sizeof(*psin));
 	psin->sin_family = AF_INET;
-	psin->sin_addr.s_addr = INADDR_ANY;
+	if (!set_bind_addr(psin))
+		return 0;
 
 	if (port)
 	{
@@ -577,7 +614,8 @@ bool TCPHostInit()
 	WSAStartup(MAKEWORD(2, 0), &WsaData);
 #endif
 
-	ZF_LOGI("%s listening for host connection on host_port %d", ProductName, host_port);
+	ZF_LOGI("%s listening for host connection on %s host_port %d", ProductName,
+		HostBindAddr, host_port);
 //	InitQueue();
 
 	// Here is where our listening ports for commands and data are opened.
@@ -662,7 +700,9 @@ void TCPHostPoll() {
 	{
 		if (ret)
 		{
-			if (FD_ISSET(ListenSock, &readfs))
+			if (FD_ISSET(ListenSock, &readfs) && CONNECTED)
+				refuse_extra(ListenSock, "control");
+			else if (FD_ISSET(ListenSock, &readfs))
 			{
 				TCPControlSock = accept(ListenSock, (struct sockaddr * )&sin, &addrlen);
 
@@ -702,7 +742,9 @@ void TCPHostPoll() {
 	{
 		if (ret)
 		{
-			if (FD_ISSET(DataListenSock, &readfs))
+			if (FD_ISSET(DataListenSock, &readfs) && DATACONNECTED)
+				refuse_extra(DataListenSock, "data");
+			else if (FD_ISSET(DataListenSock, &readfs))
 			{
 				TCPDataSock = accept(DataListenSock, (struct sockaddr * )&sin, &addrlen);
 
@@ -799,7 +841,7 @@ Lost:
 
 				DATACONNECTED = false;
 
-				closesocket(TCPControlSock);
+				closesocket(TCPDataSock);  // was TCPControlSock
 				TCPDataSock= 0;
 				return;
 			}

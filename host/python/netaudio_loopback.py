@@ -11,8 +11,11 @@ transmitted.
     ardopcf -i TCP:8600 -o TCP:8600 8515
 
 Message format: type (1 byte) | payload length (uint32 little endian) | payload.
+'E' and 'D' carry the transmission number (uint32 LE).  If ardopcf runs with
+ARDOPCF_NETAUDIO_TOKEN set, run this script with the same variable.
 """
 
+import os
 import socket
 import struct
 import sys
@@ -55,6 +58,9 @@ def main():
     server.listen(1)
     conn, _ = server.accept()
     lock = threading.Lock()
+    token = os.environ.get("ARDOPCF_NETAUDIO_TOKEN")
+    if token:  # same value as in ardopcf's environment
+        send(conn, lock, b"A", token.encode())
     threading.Thread(target=rx_clock, args=(conn, lock), daemon=True).start()
     samples = 0
     try:
@@ -66,9 +72,10 @@ def main():
             elif kind == b"T":
                 samples += length // 2
             elif kind == b"E":
-                print("transmission: %.3f s" % (samples / float(RATE)))
+                print("transmission %d: %.3f s" % (struct.unpack("<I", payload)[0],
+                                                   samples / float(RATE)))
                 samples = 0
-                send(conn, lock, b"D")
+                send(conn, lock, b"D", payload)  # acknowledge this transmission
     except (EOFError, OSError):
         pass
 

@@ -43,6 +43,7 @@ void ProcessCommandFromHost(char * strCMD);
 
 extern char HostPort[80];
 extern int host_port;
+extern char HostBindAddr[64];
 char CaptureDevice[DEVSTRSZ] = "";
 int Cch = -1;  // Number of channels used to open CaptureDevice
 char PlaybackDevice[DEVSTRSZ] = "";
@@ -378,6 +379,7 @@ static struct option long_options[] =
 	{"keystring",  required_argument, 0 , 'k'},
 	{"unkeystring",  required_argument, 0 , 'u'},
 	{"webgui",  required_argument, 0 , 'G'},
+	{"hostaddr",  required_argument, 0 , 1001},
 	{"writewav",  no_argument, 0, 'w'},
 	{"writetxwav",  no_argument, 0, 'T'},
 	{"decodewav",  required_argument, 0, 'd'},
@@ -444,6 +446,8 @@ char HelpScreen[] =
 	"-R use Right Channel of Soundcard for receive in stereo mode\n"
 	"-y use Left Channel of Soundcard for transmit in stereo mode\n"
 	"-z use Right Channel of Soundcard for transmit in stereo mode\n"
+	"--hostaddr addr                      IPv4 address the host ports bind to (default\n"
+	"                                       127.0.0.1: only programs on this computer)\n"
 	"-G wg_port or --webgui wg_port       Specify wg_port for WebGui.  If wg_port is 0, then\n"
 	"                                     disable WebGui.  Without this option, the WebGui\n"
 	"                                     uses the default port of 8514.\n"
@@ -775,6 +779,18 @@ int processargs(int argc, char * argv[]) {
 					UseLeftTX = false;
 					UseRightTX = true;
 				}
+				break;
+
+			case 1001:
+				if (strlen(optarg) >= sizeof(HostBindAddr)) {
+					ZF_LOGE("ERROR: --hostaddr too long.  Keeping %s.", HostBindAddr);
+					break;
+				}
+				snprintf(HostBindAddr, sizeof(HostBindAddr), "%s", optarg);
+				if (strcmp(HostBindAddr, "127.0.0.1") != 0)
+					ZF_LOGW("Host ports bound to %s: other computers can control"
+						" this TNC and send data to transmit.  Use a firewall.",
+						HostBindAddr);
 				break;
 
 			case 'G':
