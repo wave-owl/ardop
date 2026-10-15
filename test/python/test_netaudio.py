@@ -271,6 +271,32 @@ def test_handshake_never_sends_token():
         tnc.close()
 
 
+def test_handshake_with_fragmented_messages():
+    """The handshake reads N and P correctly when they arrive byte by byte."""
+    tnc = Tnc(handshake=False)
+    try:
+        nonce1 = os.urandom(32)
+        for b in HEADER.pack(b"N", 32) + nonce1:
+            tnc.conn.send(bytes([b]))
+            time.sleep(0.005)
+        kind, hello = tnc.read_msg()
+        parts = hello.decode().split()
+        key = TOKEN.encode()
+        assert hmac.compare_digest(bytes.fromhex(parts[4]), hmac.new(
+            key, nonce1 + b"engine", hashlib.sha256).digest())
+        proof = hmac.new(key, bytes.fromhex(parts[3]) + b"bridge", hashlib.sha256).digest()
+        for b in HEADER.pack(b"P", 32) + proof:
+            tnc.conn.send(bytes([b]))
+            time.sleep(0.005)
+        tnc.connect_host()
+        _rx_silence(tnc, 0.3)
+        tnc.command("MYCALL DG6FL")
+        tail, samples, seq = _burst(tnc, "DataACK 80 0x3F", ack="now")
+        assert seq == 1 and samples > 0
+    finally:
+        tnc.close()
+
+
 def test_wrong_bridge_proof_refused():
     """A host that cannot prove the token (squatter) gets no audio and is closed."""
     tnc = Tnc(handshake=False)

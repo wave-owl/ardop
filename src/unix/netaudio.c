@@ -276,12 +276,29 @@ static bool recv_deadline(int fd, void *buf, size_t n, uint64_t deadline) {
 			return false;
 		struct pollfd p = {fd, POLLIN, 0};
 		int r = poll(&p, 1, (int) (deadline - now));
+		if (r < 0 && errno == EINTR)
+			continue;  // a signal: retry within the same deadline
 		if (r <= 0)
 			return false;
 		ssize_t k = recv(fd, (char *) buf + got, n - got, 0);
+		if (k < 0 && errno == EINTR)
+			continue;
 		if (k <= 0)
 			return false;
 		got += (size_t) k;
+	}
+	return true;
+}
+
+static bool send_all(int fd, const unsigned char *p, size_t n) {
+	while (n > 0) {
+		ssize_t w = send(fd, p, n, NA_SEND_FLAGS);
+		if (w < 0 && errno == EINTR)
+			continue;
+		if (w <= 0)
+			return false;  // SO_SNDTIMEO bounds a stalled peer
+		p += w;
+		n -= (size_t) w;
 	}
 	return true;
 }
@@ -290,8 +307,8 @@ static bool send_raw(int fd, char type, const void *payload, uint32_t len) {
 	unsigned char hdr[5];
 	hdr[0] = (unsigned char) type;
 	put_u32(hdr + 1, len);
-	return send(fd, hdr, sizeof(hdr), NA_SEND_FLAGS) == (ssize_t) sizeof(hdr)
-		&& (len == 0 || send(fd, payload, len, NA_SEND_FLAGS) == (ssize_t) len);
+	return send_all(fd, hdr, sizeof(hdr))
+		&& (len == 0 || send_all(fd, (const unsigned char *) payload, len));
 }
 
 static bool random_bytes(unsigned char *buf, size_t n) {
@@ -319,7 +336,11 @@ static bool equal_ct(const unsigned char *a, const unsigned char *b, size_t n) {
 	return diff == 0;
 }
 
-// Mutual challenge-response (protocol 3), all within NA_AUTH_TIMEOUT_MS:
+// Mutual challenge-response (protocol 3), all within NA_AUTH_TIMEOUT_MS.
+// It runs when the device is opened (start-up or a CAPTURE/PLAYBACK host
+// command) and blocks ardopcf's main loop for at most that budget; the host
+// program that starts ardopcf answers within milliseconds.  Kept blocking
+// on purpose: no audio may flow before both sides are authenticated.
 //   host -> 'N' nonce1 (32 bytes)
 //   ardopcf -> 'H' "ARDOPCF-NETAUDIO 3 12000 <hex nonce2> <hex HMAC(token, nonce1||"engine")>"
 //   host -> 'P' HMAC(token, nonce2||"bridge") (32 bytes)
