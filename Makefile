@@ -90,6 +90,7 @@ OBJS = \
 	$(BUILDDIR)/src/common/noise.o \
 	$(BUILDDIR)/src/common/ptt.o \
 	$(BUILDDIR)/src/common/eutf8.o \
+	$(BUILDDIR)/src/common/hmac_sha256.o \
 
 # Object files shared by the Unix-like platforms (Linux and macOS)
 OBJS_UNIX = \

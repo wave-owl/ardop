@@ -8,26 +8,29 @@
 // <host> must be a loopback address).  Capture and playback must name the same
 // device.  ardopcf connects to the host program, which must already listen.
 //
-// Wire format (protocol 2): every message is
+// Wire format (protocol 3): every message is
 //     type (1 byte) | payload length (uint32, little endian) | payload
-// Types:
-//     'A' host -> ardopcf   authentication: the token, sent first by the host
-//                           when ARDOPCF_NETAUDIO_TOKEN is set (see below)
-//     'H' ardopcf -> host   hello, ASCII "ARDOPCF-NETAUDIO 2 12000[ <token>]"
+// Handshake (one 3 s budget in total, the token never crosses the wire):
+//     'N' host -> ardopcf   nonce1 (32 random bytes)
+//     'H' ardopcf -> host   "ARDOPCF-NETAUDIO 3 12000 <hex nonce2>
+//                            <hex HMAC-SHA256(token, nonce1 || "engine")>"
+//     'P' host -> ardopcf   HMAC-SHA256(token, nonce2 || "bridge") (32 bytes)
+// Audio:
 //     'R' host -> ardopcf   RX audio, int16 little endian mono at 12000 Hz,
 //                           sent in real time by the host (it owns the clock)
 //     'T' ardopcf -> host   TX audio, int16 little endian mono at 12000 Hz,
 //                           paced to at most 500 ms ahead of real time
 //     'E' ardopcf -> host   end of transmission number N (uint32 LE payload)
-//     'D' host -> ardopcf   transmission N has left the radio (uint32 LE)
+//     'D' host -> ardopcf   transmission N has left the radio (uint32 LE);
+//                           only a D for the current N received after its E
+//                           counts
 //
-// Authentication: if the environment variable ARDOPCF_NETAUDIO_TOKEN is set
-// (by the program that starts ardopcf), the host must send 'A' with exactly
-// that token within 3 s of the connection, else ardopcf refuses the device;
-// ardopcf then echoes the token in its hello so the host can verify it.  A
-// local process that squats on the port therefore never receives TX audio or
-// PTT control.  Without the variable the device works unauthenticated.
-//
+// The token comes from the environment variable ARDOPCF_NETAUDIO_TOKEN
+// (16..128 characters), set by the program that starts ardopcf; without it the
+// device is refused.  Both sides prove knowledge of the token, so neither a
+// local process squatting on the port nor a rogue client gets TX audio, the
+// RX stream or PTT control.
+
 // PTT is unchanged: without CAT/PTT options ardopcf reports "PTT TRUE" and
 // "PTT FALSE" on the host command port, and the host keys the radio.  ardopcf
 // drops PTT only after 'D' for the current transmission AND at least the
@@ -44,7 +47,7 @@
 #include <stdbool.h>
 
 #define NETAUDIO_PREFIX "TCP:"
-#define NETAUDIO_VERSION 2
+#define NETAUDIO_VERSION 3
 #define NETAUDIO_TOKEN_ENV "ARDOPCF_NETAUDIO_TOKEN"
 
 // Append the socket audio device in use (if any) to the device list, so the

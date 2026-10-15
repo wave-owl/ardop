@@ -13,6 +13,8 @@ void PollReceivedSamples();
 #ifdef WIN32
 #define _CRT_SECURE_NO_DEPRECATE
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
@@ -21,6 +23,8 @@ void PollReceivedSamples();
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #define SOCKET int
 #define closesocket close
 #define HANDLE int
@@ -787,6 +791,14 @@ int processargs(int argc, char * argv[]) {
 					break;
 				}
 				snprintf(HostBindAddr, sizeof(HostBindAddr), "%s", optarg);
+				{
+					struct in_addr probe;
+					if (inet_pton(AF_INET, HostBindAddr, &probe) != 1) {
+						ZF_LOGF("Invalid --hostaddr %s (IPv4 address expected).",
+							HostBindAddr);
+						exit(1);
+					}
+				}
 				if (strcmp(HostBindAddr, "127.0.0.1") != 0)
 					ZF_LOGW("Host ports bound to %s: other computers can control"
 						" this TNC and send data to transmit.  Use a firewall.",

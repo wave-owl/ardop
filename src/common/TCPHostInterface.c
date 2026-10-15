@@ -621,6 +621,11 @@ bool TCPHostInit()
 	// Here is where our listening ports for commands and data are opened.
 	ListenSock = OpenSocket4(host_port);
 	DataListenSock = OpenSocket4(host_port + 1);
+	if (ListenSock == 0 || DataListenSock == 0) {
+		ZF_LOGF("Cannot listen on %s ports %d/%d; exiting.", HostBindAddr, host_port,
+			host_port + 1);
+		exit(1);
+	}
 
 	GUISock = OpenUDPSocket(host_port);
 

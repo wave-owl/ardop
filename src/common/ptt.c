@@ -1218,8 +1218,24 @@ size_t EncodeDeviceStrlist(char *dst, int dstsize, char **ss, char **cs) {
 // If state is true, then switch to transmit.  If state is false, then switch
 // to recieve.  If none of the methods for locally controlling PTT are set, then
 // send commands to the host program which it may use to control PTT.
+static bool ptt_keyed = false;
+
+bool PTTKeyed(void) {
+	return ptt_keyed;
+}
+
+extern bool TXEnabled;
+
 void KeyPTT(bool state) {
 	bool done = false;
+
+	if (state && !TXEnabled) {
+		// Without a playback device nothing would ever unkey this (SoundFlush
+		// is skipped), so never key the transmitter.
+		ZF_LOGW("KeyPTT(true) refused: no playback device (TXEnabled false)");
+		return;
+	}
+	ptt_keyed = state;
 
 	if (PTTmode & PTTRTS) {
 		if (state) {

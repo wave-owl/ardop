@@ -11,6 +11,8 @@ reachable there).
 Run with:  python test_netaudio.py      or      pytest test_netaudio.py
 """
 
+import hashlib
+import hmac
 import os
 import socket
 import struct
@@ -19,6 +21,7 @@ import sys
 import time
 
 HEADER = struct.Struct("<cI")
+TOKEN = "test-token-0123456789abcdef"
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
@@ -75,8 +78,8 @@ def lan_address():
 class Tnc:
     """ardopcf with the socket audio device and a host on both ends."""
 
-    def __init__(self, token=None, extra=(), audio_dev=None, rcvbuf=None, out_dev=None,
-                 accept_audio=True):
+    def __init__(self, token=TOKEN, extra=(), audio_dev=None, rcvbuf=None, out_dev=None,
+                 accept_audio=True, handshake=True):
         self.audio = socket.socket()
         self.audio.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if rcvbuf:
@@ -103,6 +106,25 @@ class Tnc:
                 self.conn = None
         self.cmd = None
         self.lines = []
+        self.hello = None
+        if self.conn is not None and handshake:
+            self.handshake(token)
+
+    def handshake(self, token, proof=None):
+        """Protocol 3: N nonce1 -> H (nonce2, HMAC engine) -> P HMAC bridge."""
+        nonce1 = os.urandom(32)
+        self.send(b"N", nonce1)
+        kind, hello = self.read_msg()
+        assert kind == b"H"
+        self.hello = hello.decode()
+        parts = self.hello.split()
+        assert parts[:3] == ["ARDOPCF-NETAUDIO", "3", "12000"]
+        nonce2, mac = bytes.fromhex(parts[3]), bytes.fromhex(parts[4])
+        key = (token or "").encode()
+        assert hmac.compare_digest(mac, hmac.new(key, nonce1 + b"engine",
+                                                 hashlib.sha256).digest())
+        self.send(b"P", proof if proof is not None
+                  else hmac.new(key, nonce2 + b"bridge", hashlib.sha256).digest())
 
     def send(self, kind, payload=b""):
         self.conn.sendall(HEADER.pack(kind, len(payload)) + payload)
@@ -230,27 +252,109 @@ def test_second_host_connection_refused():
         tnc.close()
 
 
-def test_token_required_when_set():
-    """With ARDOPCF_NETAUDIO_TOKEN set, a host without the token gets nothing."""
-    tnc = Tnc(token="s3cret-token")
+def test_token_required():
+    """Without ARDOPCF_NETAUDIO_TOKEN the socket audio device is refused."""
+    tnc = Tnc(token=None, accept_audio=False)
     try:
-        assert tnc.conn is not None
+        time.sleep(1.0)
+    finally:
+        out = tnc.close()
+    assert "must be set" in out
+
+
+def test_handshake_never_sends_token():
+    """Protocol 3: the hello carries a nonce and an HMAC, never the token."""
+    tnc = Tnc()
+    try:
+        assert TOKEN not in tnc.hello
+    finally:
+        tnc.close()
+
+
+def test_wrong_bridge_proof_refused():
+    """A host that cannot prove the token (squatter) gets no audio and is closed."""
+    tnc = Tnc(handshake=False)
+    try:
+        try:
+            tnc.handshake(TOKEN, proof=b"\x00" * 32)
+        except AssertionError:
+            pass
         tnc.conn.settimeout(5)
-        assert tnc.conn.recv(100) == b""  # no hello, closed after 3 s
+        assert tnc.conn.recv(100) == b""
     finally:
         out = tnc.close()
     assert "did not authenticate" in out
 
 
-def test_token_accepted():
-    """The right token is answered with a hello that echoes it."""
-    tnc = Tnc(token="s3cret-token")
+def test_handshake_deadline_against_slow_peer():
+    """One 3 s budget for the whole handshake: trickling bytes does not extend it."""
+    tnc = Tnc(handshake=False)
     try:
-        tnc.send(b"A", b"s3cret-token")
-        kind, hello = tnc.read_msg()
-        assert kind == b"H" and hello == b"ARDOPCF-NETAUDIO 2 12000 s3cret-token"
+        start = time.monotonic()
+        msg = HEADER.pack(b"N", 32) + os.urandom(32)
+        closed = False
+        for byte in msg:
+            try:
+                tnc.conn.send(bytes([byte]))
+            except OSError:
+                closed = True
+                break
+            time.sleep(0.2)
+            if time.monotonic() - start > 6:
+                break
+        tnc.conn.settimeout(2)
+        try:
+            data = tnc.conn.recv(100)
+            closed = closed or data == b""
+        except OSError:
+            closed = True
+        assert closed and time.monotonic() - start < 7.5
+    finally:
+        out = tnc.close()
+    assert "did not authenticate" in out
+
+
+def test_fault_then_next_tx_unkeys():
+    """After an audio FAULT, a new transmission never leaves PTT keyed."""
+    tnc = Tnc()
+    try:
+        tnc.connect_host()
+        tnc.command("MYCALL DG6FL")
+        _rx_silence(tnc, 0.3)
+        tnc.conn.close()
+        tnc.conn = None
+        t, _ = tnc.wait_line("FAULT Socket audio connection lost", 5)
+        assert t is not None
+        tnc.command('TXFRAME 4FSK.2000.600.E "X" 0x3F')
+        tnc.command("ARQCALL LA1B 2")
+        t_on, _ = tnc.wait_line("PTT TRUE", 4)
+        if t_on is not None:
+            t_off, _ = tnc.wait_line("PTT FALSE", 3)
+            assert t_off is not None and t_off - t_on < 3
     finally:
         tnc.close()
+
+
+def test_future_d_ignored():
+    """A D for a later transmission sent early does not end that transmission."""
+    tnc = Tnc()
+    try:
+        tnc.connect_host()
+        tnc.command("MYCALL DG6FL")
+        _, _, seq = _burst(tnc, "DataACK 80 0x3F", ack="now")
+        tnc.send(b"D", struct.pack("<I", seq + 1))     # future number, sent early
+        tail, samples, seq2 = _burst(tnc, "DataACK 80 0x3F", ack=None)
+        assert seq2 == seq + 1
+        assert tail is not None and tail >= 1.0   # waited for the timeout
+    finally:
+        tnc.close()
+
+
+def test_invalid_hostaddr_fails_startup():
+    """An invalid --hostaddr ends ardopcf with an error instead of binding nothing."""
+    res = subprocess.run([binary(), "-m", "-G", "0", "--hostaddr", "999.1.1.1",
+                          str(free_pair())], capture_output=True, text=True, timeout=10)
+    assert res.returncode != 0
 
 
 def test_non_loopback_audio_host_refused():
@@ -278,7 +382,6 @@ def test_early_d_waits_for_transmission_length():
     """A D sent at once is honoured only after the transmission's duration."""
     tnc = Tnc()
     try:
-        tnc.read_msg()  # hello
         tnc.connect_host()
         tnc.command("MYCALL DG6FL")
         tail, samples, seq = _burst(tnc, '4FSK.2000.600.E "X" 0x3F', ack="now")
@@ -295,7 +398,6 @@ def test_stale_d_ignored_and_wall_clock_timeout():
     """A D for the previous transmission is ignored; timeout = length + 2 s wall clock."""
     tnc = Tnc()
     try:
-        tnc.read_msg()
         tnc.connect_host()
         tnc.command("MYCALL DG6FL")
         tail, samples, seq = _burst(tnc, "DataACK 80 0x3F", ack="stale")
@@ -312,7 +414,6 @@ def test_stalled_host_drops_ptt_and_reports_fault():
     socket buffers absorb the whole frame)."""
     tnc = Tnc(rcvbuf=4096)
     try:
-        tnc.read_msg()
         tnc.connect_host()
         tnc.command("MYCALL DG6FL")
         tnc.command('TXFRAME 4FSK.2000.600.E "X" 0x3F')
@@ -330,7 +431,6 @@ def test_connection_loss_reported():
     """Closing the audio connection reports a FAULT to the host."""
     tnc = Tnc()
     try:
-        tnc.read_msg()
         tnc.connect_host()
         _rx_silence(tnc, 0.3)
         tnc.conn.close()

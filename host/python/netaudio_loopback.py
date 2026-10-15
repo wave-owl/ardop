@@ -11,10 +11,12 @@ transmitted.
     ardopcf -i TCP:8600 -o TCP:8600 8515
 
 Message format: type (1 byte) | payload length (uint32 little endian) | payload.
-'E' and 'D' carry the transmission number (uint32 LE).  If ardopcf runs with
-ARDOPCF_NETAUDIO_TOKEN set, run this script with the same variable.
+'E' and 'D' carry the transmission number (uint32 LE).  Run ardopcf with
+ARDOPCF_NETAUDIO_TOKEN set (required), run this script with the same variable.
 """
 
+import hashlib
+import hmac
 import os
 import socket
 import struct
@@ -58,18 +60,26 @@ def main():
     server.listen(1)
     conn, _ = server.accept()
     lock = threading.Lock()
-    token = os.environ.get("ARDOPCF_NETAUDIO_TOKEN")
-    if token:  # same value as in ardopcf's environment
-        send(conn, lock, b"A", token.encode())
+    # Protocol 3 handshake: prove knowledge of ARDOPCF_NETAUDIO_TOKEN (the same
+    # value as in ardopcf's environment) without sending it.
+    key = os.environ["ARDOPCF_NETAUDIO_TOKEN"].encode()
+    nonce1 = os.urandom(32)
+    send(conn, lock, b"N", nonce1)
+    kind, length = HEADER.unpack(recv_exact(conn, HEADER.size))
+    parts = recv_exact(conn, length).decode().split()
+    if kind != b"H" or not hmac.compare_digest(
+            bytes.fromhex(parts[4]), hmac.new(key, nonce1 + b"engine", hashlib.sha256).digest()):
+        sys.exit("ardopcf did not authenticate")
+    send(conn, lock, b"P", hmac.new(key, bytes.fromhex(parts[3]) + b"bridge",
+                                    hashlib.sha256).digest())
+    print("hello:", " ".join(parts[:3]))
     threading.Thread(target=rx_clock, args=(conn, lock), daemon=True).start()
     samples = 0
     try:
         while True:
             kind, length = HEADER.unpack(recv_exact(conn, HEADER.size))
             payload = recv_exact(conn, length) if length else b""
-            if kind == b"H":
-                print("hello:", payload.decode())
-            elif kind == b"T":
+            if kind == b"T":
                 samples += length // 2
             elif kind == b"E":
                 print("transmission %d: %.3f s" % (struct.unpack("<I", payload)[0],

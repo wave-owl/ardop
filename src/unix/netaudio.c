@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +24,7 @@
 #include "common/log.h"
 #include "common/netaudio.h"
 #include "common/os_util.h"
+#include "common/hmac_sha256.h"
 
 void txSleep(unsigned int mS);
 
@@ -256,23 +258,102 @@ static int connect_dev(const char *devstr) {
 	return fd;
 }
 
-// With ARDOPCF_NETAUDIO_TOKEN set, the host must prove it knows the token
-// before ardopcf sends anything.
-static bool authenticate(int fd, const char *token) {
-	struct timeval tv = {NA_AUTH_TIMEOUT_MS / 1000, 0};
-	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+static bool now_ms(uint64_t *out) {
+	struct timespec ts;
+	if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+		return false;
+	*out = (uint64_t) ts.tv_sec * 1000 + (uint64_t) ts.tv_nsec / 1000000;
+	return true;
+}
+
+// recv exactly n bytes before the absolute deadline (one budget for the whole
+// handshake, so a peer trickling bytes cannot extend it).
+static bool recv_deadline(int fd, void *buf, size_t n, uint64_t deadline) {
+	size_t got = 0;
+	while (got < n) {
+		uint64_t now;
+		if (!now_ms(&now) || now >= deadline)
+			return false;
+		struct pollfd p = {fd, POLLIN, 0};
+		int r = poll(&p, 1, (int) (deadline - now));
+		if (r <= 0)
+			return false;
+		ssize_t k = recv(fd, (char *) buf + got, n - got, 0);
+		if (k <= 0)
+			return false;
+		got += (size_t) k;
+	}
+	return true;
+}
+
+static bool send_raw(int fd, char type, const void *payload, uint32_t len) {
 	unsigned char hdr[5];
-	char got[NA_MAX_TOKEN + 1];
-	bool ok = recv_exact(fd, hdr, sizeof(hdr)) && hdr[0] == 'A';
-	uint32_t len = ok ? get_u32(hdr + 1) : 0;
-	ok = ok && len == strlen(token) && len <= NA_MAX_TOKEN && recv_exact(fd, got, len);
-	unsigned char diff = 0;
-	for (uint32_t i = 0; ok && i < len; i++)
-		diff |= (unsigned char) (got[i] ^ token[i]);
-	ok = ok && diff == 0;
-	struct timeval none = {0, 0};
-	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &none, sizeof(none));
+	hdr[0] = (unsigned char) type;
+	put_u32(hdr + 1, len);
+	return send(fd, hdr, sizeof(hdr), NA_SEND_FLAGS) == (ssize_t) sizeof(hdr)
+		&& (len == 0 || send(fd, payload, len, NA_SEND_FLAGS) == (ssize_t) len);
+}
+
+static bool random_bytes(unsigned char *buf, size_t n) {
+	FILE *f = fopen("/dev/urandom", "rb");
+	if (f == NULL)
+		return false;
+	bool ok = fread(buf, 1, n, f) == n;
+	fclose(f);
 	return ok;
+}
+
+static void to_hex(const unsigned char *b, size_t n, char *out) {
+	static const char digits[] = "0123456789abcdef";
+	for (size_t i = 0; i < n; i++) {
+		out[2 * i] = digits[b[i] >> 4];
+		out[2 * i + 1] = digits[b[i] & 0x0F];
+	}
+	out[2 * n] = 0x00;
+}
+
+static bool equal_ct(const unsigned char *a, const unsigned char *b, size_t n) {
+	unsigned char diff = 0;
+	for (size_t i = 0; i < n; i++)
+		diff |= (unsigned char) (a[i] ^ b[i]);
+	return diff == 0;
+}
+
+// Mutual challenge-response (protocol 3), all within NA_AUTH_TIMEOUT_MS:
+//   host -> 'N' nonce1 (32 bytes)
+//   ardopcf -> 'H' "ARDOPCF-NETAUDIO 3 12000 <hex nonce2> <hex HMAC(token, nonce1||"engine")>"
+//   host -> 'P' HMAC(token, nonce2||"bridge") (32 bytes)
+// The token itself never crosses the connection.
+static bool handshake(int fd, const char *token) {
+	uint64_t deadline;
+	if (!now_ms(&deadline))
+		return false;
+	deadline += NA_AUTH_TIMEOUT_MS;
+	const unsigned char *key = (const unsigned char *) token;
+	size_t keylen = strlen(token);
+	unsigned char hdr[5], nonce1[32], nonce2[32], mac[SHA256_LEN], got[SHA256_LEN];
+	if (!recv_deadline(fd, hdr, sizeof(hdr), deadline) || hdr[0] != 'N'
+		|| get_u32(hdr + 1) != sizeof(nonce1)
+		|| !recv_deadline(fd, nonce1, sizeof(nonce1), deadline))
+		return false;
+	if (!random_bytes(nonce2, sizeof(nonce2)))
+		return false;
+	hmac_sha256(key, keylen, nonce1, sizeof(nonce1), (const unsigned char *) "engine", 6,
+		mac);
+	char hello[64 + 4 * SHA256_LEN + 4], n2hex[65], machex[65];
+	to_hex(nonce2, sizeof(nonce2), n2hex);
+	to_hex(mac, sizeof(mac), machex);
+	int len = snprintf(hello, sizeof(hello), "ARDOPCF-NETAUDIO %d 12000 %s %s",
+		NETAUDIO_VERSION, n2hex, machex);
+	if (!send_raw(fd, 'H', hello, (uint32_t) len))
+		return false;
+	if (!recv_deadline(fd, hdr, sizeof(hdr), deadline) || hdr[0] != 'P'
+		|| get_u32(hdr + 1) != sizeof(got)
+		|| !recv_deadline(fd, got, sizeof(got), deadline))
+		return false;
+	hmac_sha256(key, keylen, nonce2, sizeof(nonce2), (const unsigned char *) "bridge", 6,
+		mac);
+	return equal_ct(mac, got, sizeof(mac));
 }
 
 bool netaudio_open(const char *devstr, bool capture) {
@@ -284,24 +365,18 @@ bool netaudio_open(const char *devstr, bool capture) {
 	}
 	if (na_fd < 0) {
 		const char *token = getenv(NETAUDIO_TOKEN_ENV);
-		if (token != NULL && strlen(token) > NA_MAX_TOKEN) {
-			ZF_LOGE("Socket audio: %s longer than %d characters", NETAUDIO_TOKEN_ENV,
-				NA_MAX_TOKEN);
+		if (token == NULL || strlen(token) < 16 || strlen(token) > NA_MAX_TOKEN) {
+			ZF_LOGE("Socket audio refused: %s must be set (16..%d characters) by the"
+				" program that starts ardopcf", NETAUDIO_TOKEN_ENV, NA_MAX_TOKEN);
 			return false;
 		}
 		int fd = connect_dev(devstr);
 		if (fd < 0)
 			return false;
-		if (token != NULL && token[0] != 0x00) {
-			if (!authenticate(fd, token)) {
-				ZF_LOGE("Socket audio: the host at %s did not authenticate; refused",
-					devstr);
-				close(fd);
-				return false;
-			}
-		} else {
-			ZF_LOGW("Socket audio: %s not set, connection is unauthenticated",
-				NETAUDIO_TOKEN_ENV);
+		if (!handshake(fd, token)) {
+			ZF_LOGE("Socket audio: the host at %s did not authenticate; refused", devstr);
+			close(fd);
+			return false;
 		}
 		na_fd = fd;
 		na_broken = false;
@@ -311,14 +386,6 @@ bool netaudio_open(const char *devstr, bool capture) {
 		na_have_d = false;
 		pthread_mutex_unlock(&na_lock);
 		na_burst_samples = 0;
-		char hello[64 + NA_MAX_TOKEN];
-		int n = snprintf(hello, sizeof(hello), "ARDOPCF-NETAUDIO %d 12000%s%s",
-			NETAUDIO_VERSION, token && token[0] ? " " : "", token ? token : "");
-		if (!send_msg('H', hello, (uint32_t) n)) {
-			close(na_fd);
-			na_fd = -1;
-			return false;
-		}
 		if (pthread_create(&na_thread, NULL, reader, NULL) != 0) {
 			close(na_fd);
 			na_fd = -1;
@@ -413,6 +480,11 @@ bool netaudio_flush(unsigned int timeout_ms) {
 	na_burst_samples = 0;
 	unsigned char payload[4];
 	put_u32(payload, seq);
+	// Only a D received after this E counts (a D for a future number sent
+	// earlier must not end this transmission).
+	pthread_mutex_lock(&na_lock);
+	na_have_d = false;
+	pthread_mutex_unlock(&na_lock);
 	if (!send_msg('E', payload, sizeof(payload)))
 		return false;
 	while (!na_broken) {

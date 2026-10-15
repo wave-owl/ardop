@@ -15,6 +15,8 @@
 
 // TODO: Add documentation for these functions
 void KeyPTT(bool state);
+// True between KeyPTT(true) and KeyPTT(false).
+bool PTTKeyed(void);
 bool rxCAT();
 int set_ptt_on_cmd(char *str, char *descstr);
 int set_ptt_off_cmd(char *str, char *descstr);

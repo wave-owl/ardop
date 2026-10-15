@@ -37,7 +37,10 @@ const char ProductName[] = "ardopcf";
 #include "wav.h"
 #include "Modulate.h"
 #include "Webgui.h"
+#include "ptt.h"
 #include "rockliff/rrs.h"
+
+void StartCapture();
 
 UCHAR bytDataToSend[DATABUFFERSIZE];
 int bytDataToSendLength = 0;
@@ -670,6 +673,15 @@ void ardopmain() {
 	}
 
 	while(!blnClosing) {
+		// Every transmission keys and unkeys PTT inside one call; PTT still
+		// keyed here means an aborted transmission skipped SoundFlush().
+		if (PTTKeyed()) {
+			ZF_LOGE("PTT left keyed by an aborted transmission; unkeying.");
+			SoundIsPlaying = false;
+			KeyPTT(false);
+			if (RXEnabled)
+				StartCapture();
+		}
 		if (RXEnabled)
 			PollReceivedSamples();
 		WebguiPoll();
