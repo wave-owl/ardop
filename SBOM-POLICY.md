@@ -1,6 +1,6 @@
 # Repository source SBOM
 
-Every published release, including patch, minor, major and prerelease versions,
+Every published GitHub Release, including patch, minor, major and prerelease versions,
 receives this repository's own `SBOM.cdx.json` (CycloneDX 1.6) and readable
 `SBOM.md`. The release description automatically links both reports.
 
@@ -26,3 +26,5 @@ python3 scripts/repository_sbom.py --root . --tag EXISTING_RELEASE_TAG --output-
 ```
 
 Upstream mirror branches and tags are never rewritten by this automation.
+
+Mirrored Git tags alone are not GitHub Release objects and do not trigger release-asset publication. This workflow never creates releases or version tags.

@@ -402,6 +402,10 @@ class Inventory:
                 self.syft, "scan", "dir:" + str(staging),
                 "--output", "cyclonedx-json@1.6",
             ]))
+            # Syft also catalogs CI manifests as files; never publish workstation paths.
+            scanned = json.loads(json.dumps(scanned).replace(
+                json.dumps(str(staging))[1:-1], "tracked-source"
+            ))
             if scanned.get("bomFormat") != "CycloneDX" or scanned.get("specVersion") != "1.6":
                 raise EvidenceError("Syft must produce CycloneDX 1.6 (use Syft 1.55.0)")
             syft_root = scanned.get("metadata", {}).get("component", {}).get("bom-ref")
