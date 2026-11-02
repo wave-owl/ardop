@@ -1,0 +1,218 @@
+# Copy to .github/workflows/source-sbom.yml in EACH source repository.
+# Install scripts/repository_sbom.py and repository-specific .sbom.json on the
+# default branch first. Old tags need not contain either file.
+#
+# release:published does NOT fire when GITHUB_TOKEN creates the release. Daily
+# reconciliation supplies eventual coverage for those releases and legacy tags;
+# workflow_dispatch provides immediate backfill. For immediate bot-release
+# coverage, the producing workflow can run the generate/publish CLI itself:
+#   python tooling/scripts/repository_sbom.py --root source --tag "$TAG" \
+#     --config tooling/.sbom.json --output-dir build/sbom
+#   python tooling/scripts/repository_sbom.py --publish "$GITHUB_REPOSITORY" \
+#     --tag "$TAG" --output-dir build/sbom
+# Generation requires read-only GitHub access. Cross-repository private gitlinks
+# fail visibly with the default token; never expose a personal token to public code.
+# Failed generation is never published. Reconciliation retries on the next run.
+# Complete existing asset pairs are preserved, including stronger producer SBOMs.
+# Reconciliation is bounded to 100 missing releases/run, draining older backlogs.
+# GitHub can disable schedules in inactive public repositories; keep Actions and
+# schedules enabled (or explicitly invoke this workflow from release producers).
+name: Repository source SBOM
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: "32 4 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing published release tag (including prereleases)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      tooling_sha: ${{ steps.plan.outputs.tooling_sha }}
+    steps:
+      - name: Select releases and immutable default-branch tooling
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from urllib.parse import quote
+
+          def api(endpoint, paginate=False):
+              cmd = ["gh", "api"]
+              if paginate:
+                  cmd += ["--paginate", "--slurp"]
+              return json.loads(subprocess.check_output(cmd + [endpoint]))
+
+          repo = os.environ["REPOSITORY"]
+          metadata = api("repos/" + repo)
+          branch = quote(metadata["default_branch"], safe="")
+          tooling_sha = api("repos/" + repo + "/commits/" + branch)["sha"]
+          if os.environ["EVENT_NAME"] == "schedule":
+              pages = api("repos/" + repo + "/releases?per_page=100", paginate=True)
+              candidates = [release for page in pages for release in page]
+              releases = []
+              for release in candidates:
+                  if release["draft"]:
+                      continue
+                  assets = {asset["name"] for asset in release.get("assets", [])}
+                  if not {"SBOM.cdx.json", "SBOM.md"} <= assets:
+                      releases.append(release)
+              releases = releases[:100]
+          else:
+              tag = os.environ["INPUT_TAG"] or os.environ["RELEASE_TAG"]
+              release = api("repos/" + repo + "/releases/tags/" + quote(tag, safe=""))
+              if release["draft"]:
+                  raise SystemExit("SBOM publication requires a published release")
+              assets = {asset["name"] for asset in release.get("assets", [])}
+              releases = [] if {"SBOM.cdx.json", "SBOM.md"} <= assets else [release]
+          matrix = {"include": [
+              {"tag": release["tag_name"],
+               "key": hashlib.sha256(release["tag_name"].encode()).hexdigest()[:20]}
+              for release in releases
+          ]}
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("matrix=" + json.dumps(matrix, separators=(",", ":")) + "\n")
+              output.write("tooling_sha=" + tooling_sha + "\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("## Repository source SBOM\n")
+              summary.write("Selected {} published release(s), including prereleases.\n".format(len(releases)))
+              summary.write("Scheduled reconciliation also covers GITHUB_TOKEN-created releases.\n")
+              summary.write("Source scope only; binary/static-link/OS closure remains UNKNOWN.\n")
+          PY
+
+  generate:
+    needs: plan
+    if: needs.plan.outputs.matrix != '{"include":[]}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Checkout trusted default-branch tooling only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.tooling_sha }}
+          path: sbom-tooling
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/repository_sbom.py
+            /.sbom.json
+      - name: Checkout exact tagged source without executing it
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ matrix.tag }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Install fixed Syft using the official download-only action
+        id: syft
+        uses: anchore/sbom-action/download-syft@2ed2d2006fea5d582c257dbad4532b1e4cbc8b83 # pinned official source
+        with:
+          syft-version: v1.55.0
+      - name: Generate this repository's own source SBOM
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ matrix.tag }}
+          SYFT_COMMAND: ${{ steps.syft.outputs.cmd }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          config=()
+          if [[ -f source/.sbom.json ]]; then
+            config=(--config source/.sbom.json)
+          elif [[ -f sbom-tooling/.sbom.json ]]; then
+            config=(--config sbom-tooling/.sbom.json)
+          fi
+          python3 sbom-tooling/scripts/repository_sbom.py \
+            --root source --tag "$TAG" --syft "$SYFT_COMMAND" \
+            --output-dir build/sbom "${config[@]}"
+      - name: Retain successful outputs for publication
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: source-sbom-${{ matrix.key }}
+          path: |
+            build/sbom/SBOM.cdx.json
+            build/sbom/SBOM.md
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain diagnostics on failure (never release assets)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: failed-source-sbom-${{ matrix.key }}
+          path: build/sbom/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: [plan, generate]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.matrix != '{"include":[]}' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: source-sbom-${{ github.repository }}-${{ matrix.key }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout trusted publisher, not tagged repository code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.tooling_sha }}
+          path: sbom-tooling
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /scripts/repository_sbom.py
+      - name: Download successful generator output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: source-sbom-${{ matrix.key }}
+          path: build/sbom
+      - name: Upload to the same release and preserve its documentation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ matrix.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 sbom-tooling/scripts/repository_sbom.py --publish "$REPOSITORY" \
+            --tag "$TAG" --output-dir build/sbom
+          python3 - <<'PY'
+          import os
+          from urllib.parse import quote
+          tag = quote(os.environ["TAG"], safe="")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("## Source SBOM release assets\n\n")
+              summary.write("[Readable report](../../releases/download/{}/SBOM.md) · ".format(tag))
+              summary.write("[CycloneDX 1.6](../../releases/download/{}/SBOM.cdx.json)\n\n".format(tag))
+              summary.write("Source inventory only. Completeness UNKNOWN; not proof of OS/static-linked binary closure.\n")
+          PY

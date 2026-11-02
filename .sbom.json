@@ -1,0 +1,71 @@
+{
+  "gitlinks": {},
+  "vendored": [
+    {
+      "path": "lib",
+      "repository": null,
+      "commit": null,
+      "licenses": [
+        "lib/hid/LICENSE-orig.txt",
+        "lib/hid/LICENSE.txt",
+        "lib/zf_log/LICENSE"
+      ],
+      "evidence": [
+        "lib/hid/LICENSE-orig.txt",
+        "Makefile"
+      ]
+    }
+  ],
+  "models": [],
+  "external_libraries": [
+    {
+      "name": "Conditional source requirements declared by Makefile",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "Makefile"
+      ]
+    },
+    {
+      "name": "Conditional source requirements declared by lib/zf_log/CMakeLists.txt",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "lib/zf_log/CMakeLists.txt"
+      ]
+    },
+    {
+      "name": "Conditional source requirements declared by lib/zf_log/examples/CMakeLists.txt",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "lib/zf_log/examples/CMakeLists.txt"
+      ]
+    },
+    {
+      "name": "Conditional source requirements declared by lib/zf_log/tests/CMakeLists.txt",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "lib/zf_log/tests/CMakeLists.txt"
+      ]
+    },
+    {
+      "name": "Conditional source requirements declared by lib/zf_log/tests/perf/CMakeLists.txt",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "lib/zf_log/tests/perf/CMakeLists.txt"
+      ]
+    },
+    {
+      "name": "Conditional source requirements declared by lib/zf_log/zf_log/CMakeLists.txt",
+      "version": "unresolved; see immutable declaration evidence",
+      "evidence": [
+        "lib/zf_log/zf_log/CMakeLists.txt"
+      ]
+    },
+    {
+      "name": "Makefile platform audio/thread libraries; socket-audio branch has separate build path",
+      "version": "unresolved; conditional source declaration",
+      "evidence": [
+        "Makefile"
+      ]
+    }
+  ]
+}

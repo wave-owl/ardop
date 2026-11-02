@@ -1,0 +1,538 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "bom-ref": "cmake:1ee90a014d73895d1534a280e378717b01a204c62e1bb8e4b041dfc4b8acbb2b",
+      "name": "spdlog_ep",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "ExternalProject_Add"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "spdlog_ep PREFIX \"${SPDLOG_DIR}\" UPDATE_COMMAND \"\" GIT_REPOSITORY \"https://github.com/gabime/spdlog.git\" GIT_TAG \"e91e1b80f9c4332bcef8388ff48ee705128e5519\" CMAKE_GENERATOR \"${CMAKE_GENERATOR}\" CMAKE_ARGS \"-DCMAKE_TOOLCHAIN_FILE:filepath=${CMAKE_TOOLCHAIN_FILE}\" \"-DCMAKE_INSTALL_PREFIX:path=<INSTALL_DIR>\" \"-DCMAKE_BUILD_TYPE:string=${CMAKE_BUILD_TYPE}\" \"-DCMAKE_OSX_ARCHITECTURES:string=${CMAKE_OSX_ARCHITECTURES}\" \"-DCMAKE_OSX_DEPLOYMENT_TARGET:string=${CMAKE_OSX_DEPLOYMENT_TARGET}\" \"-DCMAKE_OSX_SYSROOT:path=${CMAKE_OSX_SYSROOT}\" LOG_DOWNLOAD ${SILENT_3P_BUILD} LOG_UPDATE ${SILENT_3P_BUILD} LOG_CONFIGURE ${SILENT_3P_BUILD} LOG_BUILD ${SILENT_3P_BUILD} LOG_TEST ${SILENT_3P_BUILD} LOG_INSTALL ${SILENT_3P_BUILD}"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "cmake:2f5425ba1cd15f487c9f98c345ba3c23ea6260dd8fef7c7aec38bd618ca211fb",
+      "name": "glog_ep",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "ExternalProject_Add"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "glog_ep PREFIX \"${GLOG_DIR}\" UPDATE_COMMAND \"\" GIT_REPOSITORY \"https://github.com/google/glog.git\" GIT_TAG \"4d391fe692ae6b9e0105f473945c415a3ce5a401\" CMAKE_GENERATOR \"${CMAKE_GENERATOR}\" CMAKE_ARGS \"-Wno-dev\" \"-DCMAKE_TOOLCHAIN_FILE:filepath=${CMAKE_TOOLCHAIN_FILE}\" \"-DCMAKE_INSTALL_PREFIX:path=<INSTALL_DIR>\" \"-DCMAKE_BUILD_TYPE:string=${CMAKE_BUILD_TYPE}\" \"-DCMAKE_OSX_ARCHITECTURES:string=${CMAKE_OSX_ARCHITECTURES}\" \"-DCMAKE_OSX_DEPLOYMENT_TARGET:string=${CMAKE_OSX_DEPLOYMENT_TARGET}\" \"-DCMAKE_OSX_SYSROOT:path=${CMAKE_OSX_SYSROOT}\" LOG_DOWNLOAD ${SILENT_3P_BUILD} LOG_UPDATE ${SILENT_3P_BUILD} LOG_CONFIGURE ${SILENT_3P_BUILD} LOG_BUILD ${SILENT_3P_BUILD} LOG_TEST ${SILENT_3P_BUILD} LOG_INSTALL ${SILENT_3P_BUILD}"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "cmake:383a1039ab6a092a92ef889681ccdd3bfc03ad168bed31dbc9a6a21eed5715cc",
+      "name": "g3log_ep",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "ExternalProject_Add"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "g3log_ep PREFIX \"${G3LOG_DIR}\" UPDATE_COMMAND \"\" GIT_REPOSITORY \"https://github.com/KjellKod/g3log.git\" GIT_TAG \"1c6ede6db4fbb12006b61a913de737df56b9dd32\" CMAKE_GENERATOR \"${CMAKE_GENERATOR}\" CMAKE_ARGS \"-Wno-dev\" \"-DCMAKE_TOOLCHAIN_FILE:filepath=${CMAKE_TOOLCHAIN_FILE}\" \"-DCMAKE_INSTALL_PREFIX:path=<INSTALL_DIR>\" \"-DCMAKE_BUILD_TYPE:string=${CMAKE_BUILD_TYPE}\" \"-DCMAKE_OSX_ARCHITECTURES:string=${CMAKE_OSX_ARCHITECTURES}\" \"-DCMAKE_OSX_DEPLOYMENT_TARGET:string=${CMAKE_OSX_DEPLOYMENT_TARGET}\" \"-DCMAKE_OSX_SYSROOT:path=${CMAKE_OSX_SYSROOT}\" \"-DUSE_DYNAMIC_LOGGING_LEVELS:bool=ON\" INSTALL_COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"<SOURCE_DIR>/src/g3log\" \"<INSTALL_DIR>/include/g3log\" COMMAND \"${CMAKE_COMMAND}\" -E copy_if_different \"<BINARY_DIR>/${G3LOG_LIBRARY}\" \"<INSTALL_DIR>/lib/${G3LOG_LIBRARY}\" LOG_DOWNLOAD ${SILENT_3P_BUILD} LOG_UPDATE ${SILENT_3P_BUILD} LOG_CONFIGURE ${SILENT_3P_BUILD} LOG_BUILD ${SILENT_3P_BUILD} LOG_TEST ${SILENT_3P_BUILD} LOG_INSTALL ${SILENT_3P_BUILD}"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "cmake:7684d8a5842af6f5767e62622216d807c6e99942782bca6c12980767501c40d5",
+      "name": "Threads",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "find_package"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "Threads REQUIRED"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "cmake:91b1e27844582190482da9db370f8d9f5aa61a719c65e99a37438e51d456c4af",
+      "name": "easylog_ep",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "ExternalProject_Add"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "easylog_ep PREFIX \"${EASYLOG_DIR}\" UPDATE_COMMAND \"\" GIT_REPOSITORY \"https://github.com/easylogging/easyloggingpp.git\" GIT_TAG \"f926802dfbde716d82b64b8ef3c25b7f0fcfec65\" CONFIGURE_COMMAND \"\" BUILD_COMMAND \"\" INSTALL_COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"<SOURCE_DIR>/src\" \"<INSTALL_DIR>/include\" LOG_DOWNLOAD ${SILENT_3P_BUILD} LOG_UPDATE ${SILENT_3P_BUILD} LOG_CONFIGURE ${SILENT_3P_BUILD} LOG_BUILD ${SILENT_3P_BUILD} LOG_TEST ${SILENT_3P_BUILD} LOG_INSTALL ${SILENT_3P_BUILD}"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "cmake:d1ec07facc1d772bff8a6ca35d2295c9c2c3f3f721b69b252d8e6af82c606b79",
+      "name": "PythonInterp",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-requirement"
+        },
+        {
+          "name": "sbom:cmake-source",
+          "value": "lib/zf_log/tests/perf/CMakeLists.txt"
+        },
+        {
+          "name": "sbom:cmake-command",
+          "value": "find_package"
+        },
+        {
+          "name": "sbom:cmake-declaration",
+          "value": "PythonInterp 2.7 REQUIRED"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:0",
+      "name": "Conditional source requirements declared by Makefile",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"Makefile\", \"sha256\": \"07cebecfbafa7a3730b1736a7c104d84ef3680d00b58509381fa9d7cca85f29d\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:1",
+      "name": "Conditional source requirements declared by lib/zf_log/CMakeLists.txt",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"lib/zf_log/CMakeLists.txt\", \"sha256\": \"0a3d4fa293ed47d9298d099c5a841b4263697d24cf2dc35c0384d079b0b682c9\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:2",
+      "name": "Conditional source requirements declared by lib/zf_log/examples/CMakeLists.txt",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"lib/zf_log/examples/CMakeLists.txt\", \"sha256\": \"e9173e260e60ff5d3f400400158a1edff5741335a66dca2c3a50c993f9a141f5\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:3",
+      "name": "Conditional source requirements declared by lib/zf_log/tests/CMakeLists.txt",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"lib/zf_log/tests/CMakeLists.txt\", \"sha256\": \"c03b6c8afbd2209574af5743c473b095560face0ed26a88ade7ff906145a8ab8\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:4",
+      "name": "Conditional source requirements declared by lib/zf_log/tests/perf/CMakeLists.txt",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"lib/zf_log/tests/perf/CMakeLists.txt\", \"sha256\": \"e2a6f9926aebe6978a32587bf57ab5e8a8308071d8a7411c451f1f0fd349aaa4\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:5",
+      "name": "Conditional source requirements declared by lib/zf_log/zf_log/CMakeLists.txt",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; see immutable declaration evidence"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"lib/zf_log/zf_log/CMakeLists.txt\", \"sha256\": \"8c57423fe58b499d4d73e4044832b07b36730b576859ef17e7027588a6d9508f\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "external-library:6",
+      "name": "Makefile platform audio/thread libraries; socket-audio branch has separate build path",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "conditional-build-runtime-requirement"
+        },
+        {
+          "name": "sbom:resolution",
+          "value": "conditional; unresolved version"
+        },
+        {
+          "name": "sbom:declared-version",
+          "value": "unresolved; conditional source declaration"
+        },
+        {
+          "name": "sbom:evidence",
+          "value": "[{\"path\": \"Makefile\", \"sha256\": \"07cebecfbafa7a3730b1736a7c104d84ef3680d00b58509381fa9d7cca85f29d\"}]"
+        }
+      ],
+      "type": "library"
+    },
+    {
+      "bom-ref": "vendored:lib",
+      "licenses": [
+        {
+          "license": {
+            "name": "License evidence; see declared files"
+          }
+        }
+      ],
+      "name": "lib",
+      "properties": [
+        {
+          "name": "sbom:license-evidence",
+          "value": "[{\"path\": \"lib/hid/LICENSE-orig.txt\", \"sha256\": \"235a14d52823619fc63cc384631df4cb7176db08d8de063976dfb2d91cf79d3d\"}, {\"path\": \"lib/hid/LICENSE.txt\", \"sha256\": \"7d3b087c34f35d4d538e3bcddd1ff8f66e92f9ef336881999482800ddf840913\"}, {\"path\": \"lib/zf_log/LICENSE\", \"sha256\": \"2ac8a0282c5c3ea66b4b541facab1ceeced00c6a338c2ba0b519817874aab2df\"}]"
+        },
+        {
+          "name": "sbom:license-resolution",
+          "value": "unresolved; manual review required"
+        },
+        {
+          "name": "sbom:role",
+          "value": "declared-vendored-source"
+        },
+        {
+          "name": "sbom:source-manifest",
+          "value": "[{\"path\": \"Makefile\", \"sha256\": \"07cebecfbafa7a3730b1736a7c104d84ef3680d00b58509381fa9d7cca85f29d\"}, {\"path\": \"lib/hid/LICENSE-orig.txt\", \"sha256\": \"235a14d52823619fc63cc384631df4cb7176db08d8de063976dfb2d91cf79d3d\"}, {\"path\": \"lib/hid/LICENSE.txt\", \"sha256\": \"7d3b087c34f35d4d538e3bcddd1ff8f66e92f9ef336881999482800ddf840913\"}, {\"path\": \"lib/hid/hid.c\", \"sha256\": \"23347d2d226a2cb290f53e7b1b215b6081597178221835dfa75a977ec7547ccd\"}, {\"path\": \"lib/hid/hidapi.h\", \"sha256\": \"3a0266e36ede89da037b05272fa078caee4f78a2a81b4253c197d60eb9bdf690\"}, {\"path\": \"lib/rawhid/rawhid.c\", \"sha256\": \"14714e70b90886a47b7a8f42a8d82aaf013ee89aa7fdd50349ed4ec6784090c2\"}, {\"path\": \"lib/rockliff/rrs.c\", \"sha256\": \"57d0078609c619ac8f634eff26d4d554ea5dc134243551d317dd498ddf96c3dd\"}, {\"path\": \"lib/rockliff/rrs.h\", \"sha256\": \"3467c23c0d67b85cff93c7bc3d557adf07aa765a8e83d086ce8230ad30ab217b\"}, {\"path\": \"lib/rockliff/rrs.txt\", \"sha256\": \"a4de2ba576bbd4fd968017020959052a924029fb20068f5038129bedc305f11b\"}, {\"path\": \"lib/txt2c/README.md\", \"sha256\": \"96874a3de2980912c8f4b6fafbda534253c60e6e8bd0f0ce4cd2769262a18dce\"}, {\"path\": \"lib/txt2c/txt2c.c\", \"sha256\": \"8a5a724a9c67d380945380b3912ad61b96daa02297348731b8713e4280383f00\"}, {\"path\": \"lib/ws_server/ws_server.c\", \"sha256\": \"038474c44a35e8231081c47e9519354444fd63ceab7d8cd717bfb970608b0989\"}, {\"path\": \"lib/ws_server/ws_server.h\", \"sha256\": \"9ae2b5360f0e21531d9af640d3fb7aab9f6cda331e2f511fd63e094e6ee3bd7e\"}, {\"path\": \"lib/zf_log/.appveyor.yml\", \"sha256\": \"2c1449af996575ba8ad655bf6b504f05740ae75000b322ee1a5dcc2e33c9d605\"}, {\"path\": \"lib/zf_log/.gitignore\", \"sha256\": \"6a7057808991926cad1eab4a4cea7cdbabbfc416a4197adb58d77f9f740f9ab2\"}, {\"path\": \"lib/zf_log/.travis.yml\", \"sha256\": \"42dba367429913e72d8d307d1da6781d2552cd5bf296108971191f367eb44e70\"}, {\"path\": \"lib/zf_log/CMakeLists.txt\", \"sha256\": \"0a3d4fa293ed47d9298d099c5a841b4263697d24cf2dc35c0384d079b0b682c9\"}, {\"path\": \"lib/zf_log/LICENSE\", \"sha256\": \"2ac8a0282c5c3ea66b4b541facab1ceeced00c6a338c2ba0b519817874aab2df\"}, {\"path\": \"lib/zf_log/README.md\", \"sha256\": \"134627accec77d3cd76f014fd25bbb51081a2cede5ad16b5fe6e75319519a0a6\"}, {\"path\": \"lib/zf_log/TODO.md\", \"sha256\": \"0dc7fc35524686dcc8ad6b74506a664b821306a7d88de6e3e419fbc833dd3ce6\"}, {\"path\": \"lib/zf_log/examples/CMakeLists.txt\", \"sha256\": \"e9173e260e60ff5d3f400400158a1edff5741335a66dca2c3a50c993f9a141f5\"}, {\"path\": \"lib/zf_log/examples/args_eval.c\", \"sha256\": \"fe0f52a396a11704b55aaae3de8de87a44ba2e0ca86152e524706582244a2a87\"}, {\"path\": \"lib/zf_log/examples/custom_output.c\", \"sha256\": \"218403419ef22cf4198b592d53d3599c27f8c715e8df224a248b1625d40493ea\"}, {\"path\": \"lib/zf_log/examples/file_output.c\", \"sha256\": \"4710e19f713123b6045cf24423b5b6535cca391aec95fcfda23cdf5232775389\"}, {\"path\": \"lib/zf_log/examples/hello.c\", \"sha256\": \"0e0691bb33bb412eb842cb496346dcb6752f807ed5edb46f7e89f13f6d19bcb0\"}, {\"path\": \"lib/zf_log/tests/CMakeLists.txt\", \"sha256\": \"c03b6c8afbd2209574af5743c473b095560face0ed26a88ade7ff906145a8ab8\"}, {\"path\": \"lib/zf_log/tests/filesize_check.c\", \"sha256\": \"8c55ceb00114d0f40565f59284ca4c4d45e399da0815c94afce7a2b1423c3d95\"}, {\"path\": \"lib/zf_log/tests/perf/CMakeLists.txt\", \"sha256\": \"e2a6f9926aebe6978a32587bf57ab5e8a8308071d8a7411c451f1f0fd349aaa4\"}, {\"path\": \"lib/zf_log/tests/perf/run_tests.py\", \"sha256\": \"6d8e3896ca3916ce72d38262e688b183bcf839156072595bfbe2a02255388fd0\"}, {\"path\": \"lib/zf_log/tests/perf/test_executable_size.cpp\", \"sha256\": \"a514085a8238e08e07005af4154a87d2973cd6704c37044eccb1084caff6469a\"}, {\"path\": \"lib/zf_log/tests/perf/test_speed.cpp\", \"sha256\": \"2523ef71a7f7196403048bca1e3ef7173eb010c34aab89e2bac37ddda9d6df16\"}, {\"path\": \"lib/zf_log/tests/perf/test_switch.h\", \"sha256\": \"4265c7499eb905f1a3f0f47a26e7f28014976d5f6088b21c0d7b0367f41ad770\"}, {\"path\": \"lib/zf_log/tests/perf/time_it.py\", \"sha256\": \"12fe73554bffb10489490da007813e27b28830ceef780068422e2528b675bd16\"}, {\"path\": \"lib/zf_log/tests/test_aux_spec.c\", \"sha256\": \"86545a255afac7d6156d2463b0dd0380125d5b0e3b5577fb819069efa4a44b85\"}, {\"path\": \"lib/zf_log/tests/test_builtin_output_facilities.c\", \"sha256\": \"a57335e764f9eec17881c2e32ae466d7733a0f62627160898226bd88acde837b\"}, {\"path\": \"lib/zf_log/tests/test_call_site_size_censoring.c\", \"sha256\": \"3aa23481e71d38a6f2d440320ce5153b5912247817e8c6a1b6a86df17db32c57\"}, {\"path\": \"lib/zf_log/tests/test_call_site_size_conditional.c\", \"sha256\": \"85b7ad3de510cf130dd98f6f1fe13da08ae02511cb7d858f7dfb8150916a7333\"}, {\"path\": \"lib/zf_log/tests/test_call_site_size_fmt_args.c\", \"sha256\": \"2c3acd0d981c33d1adb9c0ccc76b72809953c9b9e3e011c9f5491c5062af577c\"}, {\"path\": \"lib/zf_log/tests/test_call_site_size_msg_only.c\", \"sha256\": \"672d13124cdabaa13bab9eb17217dfc7f067d270c7751f139d4f79ab1c5ad019\"}, {\"path\": \"lib/zf_log/tests/test_censoring.c\", \"sha256\": \"6a9cb70dc26b9bf445e56513855fb30c1653517e8d46947ad24fa2b2ce626ea3\"}, {\"path\": \"lib/zf_log/tests/test_compilation_cpp.cpp\", \"sha256\": \"6a6ade6262c3416c61cc0440bb89f48275a274654de0a51ac1cba8ac495a4f01\"}, {\"path\": \"lib/zf_log/tests/test_conditional.c\", \"sha256\": \"f309856b1ecc3c44472aa4d3155326adf52bd9d8ae5fba0584ecf7d5a19815ca\"}, {\"path\": \"lib/zf_log/tests/test_decoration.main.c\", \"sha256\": \"91091db08712a372711cd71607fac7dfd99c859c9ea5f8be04e2acee9864da3c\"}, {\"path\": \"lib/zf_log/tests/test_decoration.module.c\", \"sha256\": \"d64edda0854c870b582a47b359e8782b3082b44b8a7ca136a7cf1e93f7f22b8e\"}, {\"path\": \"lib/zf_log/tests/test_externally_defined_state.c\", \"sha256\": \"a3f8db03194484bdab1039a11670c614023a153e0f02d56708a6914b7ab1368d\"}, {\"path\": \"lib/zf_log/tests/test_externally_defined_state_cpp.cpp\", \"sha256\": \"1b66f0d74b8cac4fddc309f872f1bdda42699f3d5dd4b59d8728d6a1e3ac8125\"}, {\"path\": \"lib/zf_log/tests/test_log_level_override.c\", \"sha256\": \"119b4b691503cca02a7be5c6162bac50fb4df23d0a555483717699cc2788a6b7\"}, {\"path\": \"lib/zf_log/tests/test_log_level_switches.c\", \"sha256\": \"a0007b80203767e3711867c63d8b3732eb0d77d111c9a5569aabfacbab4e7848\"}, {\"path\": \"lib/zf_log/tests/test_log_message_content.c\", \"sha256\": \"0c2aecbb883891004b29f7a4221d96fb11fffd097ecdbcc6f907475e6a0adc81\"}, {\"path\": \"lib/zf_log/tests/test_private_parts.c\", \"sha256\": \"0198b68b10be56752996f6a37847134470120f6df3b40ed9021588352ff54494\"}, {\"path\": \"lib/zf_log/tests/test_source_location.c\", \"sha256\": \"624a8bb3c2384c17b6cd9986345a38eb8c382e2638211bd8d790502c5b5f6011\"}, {\"path\": \"lib/zf_log/tests/zf_log.h.master\", \"sha256\": \"4de62d511f396074999b2899073ad695254eebe560dbc92945ccb36e24804701\"}, {\"path\": \"lib/zf_log/tests/zf_test.h\", \"sha256\": \"ff5e86487c5a395e86c8aceeefb0a3595c2d4ca557e30ec07c5b9ed1924ea65a\"}, {\"path\": \"lib/zf_log/zf_log-config.cmake.in\", \"sha256\": \"a5852ee6ab222899d8a45081381e397479fd8934c5b0083957aac17ba6f640fd\"}, {\"path\": \"lib/zf_log/zf_log/CMakeLists.txt\", \"sha256\": \"8c57423fe58b499d4d73e4044832b07b36730b576859ef17e7027588a6d9508f\"}, {\"path\": \"lib/zf_log/zf_log/zf_log.c\", \"sha256\": \"4ab5987a6cb3f27b2d71eb66c3de58a9363d6540065d638af5686e32b8fcf79a\"}, {\"path\": \"lib/zf_log/zf_log/zf_log.h\", \"sha256\": \"485b67072d0deca6c247d104ebe11a3f5340e3960cf1be650a7a9d10696cd712\"}]"
+        },
+        {
+          "name": "sbom:provenance-verification",
+          "value": "unknown upstream origin"
+        }
+      ],
+      "type": "library"
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "unknown",
+      "assemblies": [
+        "git:https://github.com/wave-owl/ardop@a7c92289b569afbe4259dc556d749405ebc008f5"
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "dependsOn": [],
+      "ref": "cmake:1ee90a014d73895d1534a280e378717b01a204c62e1bb8e4b041dfc4b8acbb2b"
+    },
+    {
+      "dependsOn": [],
+      "ref": "cmake:2f5425ba1cd15f487c9f98c345ba3c23ea6260dd8fef7c7aec38bd618ca211fb"
+    },
+    {
+      "dependsOn": [],
+      "ref": "cmake:383a1039ab6a092a92ef889681ccdd3bfc03ad168bed31dbc9a6a21eed5715cc"
+    },
+    {
+      "dependsOn": [],
+      "ref": "cmake:7684d8a5842af6f5767e62622216d807c6e99942782bca6c12980767501c40d5"
+    },
+    {
+      "dependsOn": [],
+      "ref": "cmake:91b1e27844582190482da9db370f8d9f5aa61a719c65e99a37438e51d456c4af"
+    },
+    {
+      "dependsOn": [],
+      "ref": "cmake:d1ec07facc1d772bff8a6ca35d2295c9c2c3f3f721b69b252d8e6af82c606b79"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:0"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:1"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:2"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:3"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:4"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:5"
+    },
+    {
+      "dependsOn": [],
+      "ref": "external-library:6"
+    },
+    {
+      "dependsOn": [
+        "cmake:1ee90a014d73895d1534a280e378717b01a204c62e1bb8e4b041dfc4b8acbb2b",
+        "cmake:2f5425ba1cd15f487c9f98c345ba3c23ea6260dd8fef7c7aec38bd618ca211fb",
+        "cmake:383a1039ab6a092a92ef889681ccdd3bfc03ad168bed31dbc9a6a21eed5715cc",
+        "cmake:7684d8a5842af6f5767e62622216d807c6e99942782bca6c12980767501c40d5",
+        "cmake:91b1e27844582190482da9db370f8d9f5aa61a719c65e99a37438e51d456c4af",
+        "cmake:d1ec07facc1d772bff8a6ca35d2295c9c2c3f3f721b69b252d8e6af82c606b79",
+        "external-library:0",
+        "external-library:1",
+        "external-library:2",
+        "external-library:3",
+        "external-library:4",
+        "external-library:5",
+        "external-library:6",
+        "vendored:lib"
+      ],
+      "ref": "git:https://github.com/wave-owl/ardop@a7c92289b569afbe4259dc556d749405ebc008f5"
+    },
+    {
+      "dependsOn": [],
+      "ref": "vendored:lib"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "bom-ref": "git:https://github.com/wave-owl/ardop@a7c92289b569afbe4259dc556d749405ebc008f5",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/wave-owl/ardop/tree/a7c92289b569afbe4259dc556d749405ebc008f5"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "name": "License evidence; see declared files"
+          }
+        }
+      ],
+      "name": "wave-owl/ardop",
+      "properties": [
+        {
+          "name": "sbom:role",
+          "value": "source-root"
+        },
+        {
+          "name": "sbom:git-commit",
+          "value": "a7c92289b569afbe4259dc556d749405ebc008f5"
+        },
+        {
+          "name": "sbom:git-tree",
+          "value": "b040775e8a918b75da063ab300a2c2e444fe6954"
+        },
+        {
+          "name": "sbom:source-repository",
+          "value": "https://github.com/wave-owl/ardop"
+        },
+        {
+          "name": "sbom:release-tags",
+          "value": "[]"
+        },
+        {
+          "name": "sbom:license-evidence",
+          "value": "[{\"path\": \"LICENSE\", \"sha256\": \"922f73954f218b99e8cb1dca0bba2aee0bc062d71d446edcfeada5b85de03e7f\"}]"
+        },
+        {
+          "name": "sbom:license-resolution",
+          "value": "unresolved; manual review required"
+        },
+        {
+          "name": "sbom:snapshot",
+          "value": "true"
+        },
+        {
+          "name": "sbom:snapshot-source-commit",
+          "value": "a7c92289b569afbe4259dc556d749405ebc008f5"
+        },
+        {
+          "name": "sbom:snapshot-scope",
+          "value": "Initial immutable source snapshot, before the tooling commit; not a release report."
+        }
+      ],
+      "type": "application",
+      "version": "a7c92289b569afbe4259dc556d749405ebc008f5"
+    },
+    "properties": [
+      {
+        "name": "sbom:scope",
+        "value": "Source repository inventory only; completeness is UNKNOWN. Syft inventories tracked source/package manifests. Gitlinks and declared vendored/model evidence are inspected at immutable pins. CMake declarations are conditional requirements, not resolved installations. This is NOT proof of operating-system packages, static-link closure, build-time resolution, or the contents of release binaries."
+      },
+      {
+        "name": "sbom:generation-status",
+        "value": "success"
+      },
+      {
+        "name": "sbom:generation-errors",
+        "value": "[]"
+      }
+    ],
+    "timestamp": "2026-11-02T16:49:34.368657+00:00",
+    "tools": {
+      "components": [
+        {
+          "author": "anchore",
+          "name": "syft",
+          "type": "application",
+          "version": "1.55.0"
+        }
+      ]
+    }
+  },
+  "serialNumber": "urn:uuid:907a7ddd-af5f-4ecb-abab-f260db467d5f",
+  "specVersion": "1.6",
+  "version": 1
+}
